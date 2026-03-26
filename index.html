@@ -191,13 +191,14 @@ function buildGrid() {
 
       wrap.addEventListener('click', function() {
         if (isRevealed) return;
-        if (!canReveal) {
+        var st = getState();
+        if (!canRevealToday(st)) {
           showToast('wr\u00f3\u0107 jutro po kolejn\u0105 kart\u0119');
           return;
         }
-        state.revealed.push(i);
-        state.lastDate = todayStr();
-        saveState(state);
+        st.revealed.push(i);
+        st.lastDate = todayStr();
+        saveState(st);
         buildGrid();
       });
 
