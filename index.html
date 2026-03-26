@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Karty</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    min-height: 100vh;
+    background: #0a0a0a;
+    color: #f0f0f0;
+    font-family: Georgia, serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 20px 60px;
+  }
+  header {
+    width: 100%;
+    max-width: 900px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 50px;
+  }
+  .title { font-size: 13px; letter-spacing: 4px; text-transform: uppercase; color: #666; margin-bottom: 20px; }
+  .timer-wrap { display: flex; align-items: center; gap: 10px; background: #141414; border: 1px solid #222; border-radius: 40px; padding: 10px 22px; }
+  .timer-dot { width: 7px; height: 7px; border-radius: 50%; background: #c9a96e; animation: pulse 2s infinite; }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+  .timer-text { font-size: 13px; color: #888; letter-spacing: 1px; }
+  .timer-text span { color: #c9a96e; }
+  .status-text { margin-top: 14px; font-size: 12px; color: #444; letter-spacing: 2px; text-transform: uppercase; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 16px; width: 100%; max-width: 900px; }
+  .card-wrap { perspective: 1000px; height: 200px; cursor: pointer; }
+  .card-wrap.locked { cursor: not-allowed; }
+  .card-wrap.revealed { cursor: default; }
+  .card-inner { position: relative; width: 100%; height: 100%; transform-style: preserve-3d; transition: transform 0.7s cubic-bezier(0.4,0,0.2,1); }
+  .card-wrap.flipped .card-inner { transform: rotateY(180deg); }
+  .card-face { position: absolute; inset: 0; border-radius: 14px; backface-visibility: hidden; -webkit-backface-visibility: hidden; display: flex; align-items: center; justify-content: center; padding: 16px; }
+  .card-front { background: #141414; border: 1px solid #222; flex-direction: column; gap: 12px; transition: border-color 0.3s; }
+  .card-wrap:not(.locked):not(.revealed):hover .card-front { border-color: rgba(201,169,110,0.3); }
+  .card-num { font-size: 28px; color: #2a2a2a; font-weight: bold; transition: color 0.3s; }
+  .card-wrap:not(.locked):not(.revealed):hover .card-num { color: rgba(201,169,110,0.3); }
+  .card-icon { font-size: 20px; opacity: 0.5; }
+  .lock-icon { font-size: 16px; opacity: 0.2; }
+  .card-back { background: linear-gradient(135deg, #1a1510, #141414); border: 1px solid rgba(201,169,110,0.2); transform: rotateY(180deg); text-align: center; }
+  .card-back p { font-size: 11.5px; line-height: 1.7; color: #d4b483; font-style: italic; }
+  .today-badge { position: absolute; top: 10px; right: 10px; width: 8px; height: 8px; border-radius: 50%; background: #c9a96e; animation: pulse 2s infinite; }
+  .toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(20px); background: #1a1a1a; border: 1px solid #333; color: #888; font-size: 12px; letter-spacing: 1px; padding: 12px 24px; border-radius: 40px; opacity: 0; transition: all 0.4s ease; pointer-events: none; white-space: nowrap; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+<header>
+  <div class="title">One More Thing I Love</div>
+  <div class="timer-wrap">
+    <div class="timer-dot"></div>
+    <div class="timer-text">nast&#x0119;pna karta za <span id="countdown">--:--:--</span></div>
+  </div>
+  <div class="status-text" id="status-text">jedna karta dziennie</div>
+</header>
+<div class="grid" id="grid"></div>
+<div class="toast" id="toast"></div>
+
+<div id="messages" style="display:none">
+  <span>Uwielbiam Tw&oacute;j u&#347;miech&hellip; i te do&#322;eczki,</span>
+  <span>Uwielbiam Twoje nogi &mdash; szczeg&oacute;lnie kiedy zak&#322;adasz szpilki.</span>
+  <span>Lubi&#281; w Tobie to, &#380;e potrafisz by&#263; jednocze&#347;nie s&#322;odka&hellip; i niegrzeczna.</span>
+  <span>Bardzo podoba mi si&#281; to, jak si&#281; poruszasz &mdash; masz w tym klas&#281; i co&#347; przyci&#261;gaj&#261;cego.</span>
+  <span>Uwielbiam Twoje piersi&hellip; lubi&#281; na nie patrze&#263;.</span>
+  <span>Lubi&#281; w Tobie to, &#380;e potrafisz mnie zaskoczy&#263; &mdash; nawet w zwyk&#322;y dzie&#324; robisz co&#347;, co zostaje w g&#322;owie.</span>
+  <span>Lubi&#281;, &#380;e jeste&#347; troch&#281; nieprzewidywalna &mdash; nigdy nie jest z Tob&#261; nudno.</span>
+  <span>Jedna rzecz, kt&oacute;ra naprawd&#281; mnie w Tobie przyci&#261;ga, to Twoja energia&hellip; ci&#281;&#380;ko j&#261; opisa&#263;, ale dzia&#322;a.</span>
+  <span>Lubi&#281; nasze rozmowy &mdash; czy to w W&#281;garniku, czy w El Time&hellip; i chcia&#322;bym &#380;eby trwa&#322;y du&#380;o d&#322;u&#380;ej.</span>
+  <span>Uwielbiam, kiedy piszesz do mnie te swoje niegrzeczne wiadomo&#347;ci &#128527;</span>
+  <span>Uwielbiam Tw&oacute;j styl i to, jak zwracasz uwag&#281; na detale.</span>
+  <span>Uwielbiam to, &#380;e jeste&#347; otwarta i lubisz pr&oacute;bowa&#263; nowe rzeczy.</span>
+  <span>Lubi&#281;, &#380;e dbasz o siebie &mdash; i &#380;e wygl&#261;dasz coraz lepiej&hellip; i bardziej sexy.</span>
+  <span>Masz w sobie co&#347;, co sprawia, &#380;e chce si&#281; sprawdza&#263;, gdzie s&#261; granice.</span>
+  <span>Uwielbiam, &#380;e czasem robisz rzeczy, kt&oacute;re zostaj&#261; mi w g&#322;owie na d&#322;ugo&hellip; i potem ci&#281;&#380;ko mi si&#281; skupi&#263;.</span>
+  <span>Lubi&#281;, jak &#347;miejesz si&#281; z rzeczy, kt&oacute;re tylko my rozumiemy.</span>
+  <span>Lubi&#281; to, jak si&#281; przy Tobie czuj&#281; &mdash; po prostu dobrze.</span>
+  <span>Lubi&#281;, &#380;e masz swoje zdanie i potrafisz je obroni&#263;.</span>
+  <span>Lubi&#281; to, jak na mnie patrzysz, kiedy dok&#322;adnie wiesz, co robisz.</span>
+  <span>Lubi&#281;, kiedy przeci&#261;gasz chwil&#281; i nie spieszysz si&#281;.</span>
+  <span>Lubi&#281;, &#380;e jeste&#347; inteligentna i &#380;e my&#347;lisz do przodu &mdash; analizujesz, przewidujesz.</span>
+  <span>Lubi&#281; to, jak si&#281; rozwijasz i &#380;e masz w sobie ambicj&#281;, &#380;eby i&#347;&#263; dalej.</span>
+  <span>Nie ukrywam &mdash; lubi&#281; te&#380;, kiedy inni troch&#281; mi Ciebie zazdroszcz&#261; &#128527;</span>
+</div>
+
+<script>
+var STORAGE_KEY = 'daily_cards_v3';
+
+function getMessages() {
+  var spans = document.getElementById('messages').getElementsByTagName('span');
+  var arr = [];
+  for (var i = 0; i < spans.length; i++) arr.push(spans[i].innerHTML);
+  return arr;
+}
+
+function getState() {
+  try {
+    var s = localStorage.getItem(STORAGE_KEY);
+    return s ? JSON.parse(s) : { revealed: [], lastDate: null };
+  } catch(e) { return { revealed: [], lastDate: null }; }
+}
+
+function saveState(state) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+function todayStr() {
+  var d = new Date();
+  return d.getFullYear() + '-' + d.getMonth() + '-' + d.getDate();
+}
+
+function canRevealToday(state) { return state.lastDate !== todayStr(); }
+
+function getNextMidnight() {
+  var next = new Date();
+  next.setHours(24, 0, 0, 0);
+  return next;
+}
+
+function pad(n) { return n < 10 ? '0' + n : '' + n; }
+
+function formatCountdown(ms) {
+  var s = Math.floor(ms / 1000);
+  return pad(Math.floor(s / 3600)) + ':' + pad(Math.floor((s % 3600) / 60)) + ':' + pad(s % 60);
+}
+
+function showToast(msg) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(function() { t.classList.remove('show'); }, 2800);
+}
+
+function buildGrid() {
+  var MESSAGES = getMessages();
+  var state = getState();
+  var grid = document.getElementById('grid');
+  var canReveal = canRevealToday(state);
+  var nextUnrevealed = -1;
+  for (var i = 0; i < MESSAGES.length; i++) {
+    if (state.revealed.indexOf(i) === -1) { nextUnrevealed = i; break; }
+  }
+
+  grid.innerHTML = '';
+
+  for (var idx = 0; idx < MESSAGES.length; idx++) {
+    (function(i) {
+      var isRevealed = state.revealed.indexOf(i) !== -1;
+      var isNext = (i === nextUnrevealed && canReveal);
+
+      var wrap = document.createElement('div');
+      wrap.className = 'card-wrap' + (isRevealed ? ' flipped revealed' : !isNext ? ' locked' : '');
+
+      var inner = document.createElement('div');
+      inner.className = 'card-inner';
+
+      var front = document.createElement('div');
+      front.className = 'card-face card-front';
+
+      if (!isRevealed && canReveal) {
+        var badge = document.createElement('div');
+        badge.className = 'today-badge';
+        front.appendChild(badge);
+      }
+
+      var num = document.createElement('div');
+      num.className = 'card-num';
+      num.textContent = pad(i + 1);
+      front.appendChild(num);
+
+      var icon = document.createElement('div');
+      icon.className = (!isRevealed && canReveal) ? 'card-icon' : 'lock-icon';
+      icon.textContent = (!isRevealed && canReveal) ? '\u2726' : '\uD83D\uDD12';
+      front.appendChild(icon);
+
+      var back = document.createElement('div');
+      back.className = 'card-face card-back';
+      var p = document.createElement('p');
+      p.innerHTML = MESSAGES[i];
+      back.appendChild(p);
+
+      inner.appendChild(front);
+      inner.appendChild(back);
+      wrap.appendChild(inner);
+
+      wrap.addEventListener('click', function() {
+        if (isRevealed) return;
+        if (!canReveal) {
+          showToast('wr\u00f3\u0107 jutro po kolejn\u0105 kart\u0119');
+          return;
+        }
+        state.revealed.push(i);
+        state.lastDate = todayStr();
+        saveState(state);
+        buildGrid();
+      });
+
+      grid.appendChild(wrap);
+    })(idx);
+  }
+
+  document.getElementById('status-text').textContent = 'odkryto ' + state.revealed.length + ' z ' + MESSAGES.length;
+}
+
+function updateCountdown() {
+  var state = getState();
+  var el = document.getElementById('countdown');
+  if (canRevealToday(state)) { el.textContent = 'teraz'; el.style.color = '#c9a96e'; return; }
+  el.textContent = formatCountdown(getNextMidnight() - Date.now());
+}
+
+buildGrid();
+updateCountdown();
+setInterval(function() {
+  updateCountdown();
+  if (canRevealToday(getState())) buildGrid();
+}, 1000);
+</script>
+</body>
+</html>
