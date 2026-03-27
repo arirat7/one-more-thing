@@ -52,8 +52,8 @@
   .today-badge { position: absolute; top: 10px; right: 10px; width: 8px; height: 8px; border-radius: 50%; background: #c9a96e; animation: pulse 2s infinite; }
   .toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(20px); background: #1a1a1a; border: 1px solid #333; color: #888; font-size: 12px; letter-spacing: 1px; padding: 12px 24px; border-radius: 40px; opacity: 0; transition: all 0.4s ease; pointer-events: none; white-space: nowrap; }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-  #reset-btn { position: fixed; bottom: 16px; right: 20px; background: none; border: none; color: #2a2a2a; font-size: 18px; cursor: pointer; transition: color 0.3s; padding: 4px; line-height: 1; }
-  #reset-btn:hover { color: rgba(201,169,110,0.27); }
+  #reset-btn { display: block; margin: 40px auto 0; background: none; border: none; color: #0a0a0a; font-size: 18px; cursor: pointer; padding: 4px; line-height: 1; }
+  #reset-btn:hover { color: #3a3a3a; }
 </style>
 </head>
 <body>
@@ -66,8 +66,8 @@
   <div class="status-text" id="status-text">jedna karta dziennie</div>
 </header>
 <div class="grid" id="grid"></div>
-<div class="toast" id="toast"></div>
 <button id="reset-btn" title="reset">&#9825;</button>
+<div class="toast" id="toast"></div>
 
 <div id="messages" style="display:none">
   <span>Uwielbiam Tw&oacute;j u&#347;miech&hellip; i te do&#322;eczki,</span>
