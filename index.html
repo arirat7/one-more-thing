@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Karty</title>
+<title>One More Thing I Love</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
@@ -32,16 +32,19 @@
   .timer-text span { color: #c9a96e; }
   .status-text { margin-top: 14px; font-size: 12px; color: #444; letter-spacing: 2px; text-transform: uppercase; }
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 16px; width: 100%; max-width: 900px; }
-  .card-wrap { perspective: 1000px; height: 200px; cursor: pointer; }
+
+  .card-wrap { perspective: 1000px; height: 200px; }
+  .card-wrap.available { cursor: pointer; }
   .card-wrap.locked { cursor: not-allowed; }
   .card-wrap.revealed { cursor: default; }
+
   .card-inner { position: relative; width: 100%; height: 100%; transform-style: preserve-3d; transition: transform 0.7s cubic-bezier(0.4,0,0.2,1); }
   .card-wrap.flipped .card-inner { transform: rotateY(180deg); }
   .card-face { position: absolute; inset: 0; border-radius: 14px; backface-visibility: hidden; -webkit-backface-visibility: hidden; display: flex; align-items: center; justify-content: center; padding: 16px; }
   .card-front { background: #141414; border: 1px solid #222; flex-direction: column; gap: 12px; transition: border-color 0.3s; }
-  .card-wrap:not(.locked):not(.revealed):hover .card-front { border-color: rgba(201,169,110,0.3); }
+  .card-wrap.available:hover .card-front { border-color: rgba(201,169,110,0.3); }
+  .card-wrap.available:hover .card-num { color: rgba(201,169,110,0.3); }
   .card-num { font-size: 28px; color: #2a2a2a; font-weight: bold; transition: color 0.3s; }
-  .card-wrap:not(.locked):not(.revealed):hover .card-num { color: rgba(201,169,110,0.3); }
   .card-icon { font-size: 20px; opacity: 0.5; }
   .lock-icon { font-size: 16px; opacity: 0.2; }
   .card-back { background: linear-gradient(135deg, #1a1510, #141414); border: 1px solid rgba(201,169,110,0.2); transform: rotateY(180deg); text-align: center; }
@@ -49,6 +52,8 @@
   .today-badge { position: absolute; top: 10px; right: 10px; width: 8px; height: 8px; border-radius: 50%; background: #c9a96e; animation: pulse 2s infinite; }
   .toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(20px); background: #1a1a1a; border: 1px solid #333; color: #888; font-size: 12px; letter-spacing: 1px; padding: 12px 24px; border-radius: 40px; opacity: 0; transition: all 0.4s ease; pointer-events: none; white-space: nowrap; }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  #reset-btn { position: fixed; bottom: 16px; right: 20px; background: none; border: none; color: #2a2a2a; font-size: 18px; cursor: pointer; transition: color 0.3s; padding: 4px; line-height: 1; }
+  #reset-btn:hover { color: rgba(201,169,110,0.27); }
 </style>
 </head>
 <body>
@@ -62,6 +67,7 @@
 </header>
 <div class="grid" id="grid"></div>
 <div class="toast" id="toast"></div>
+<button id="reset-btn" title="reset">&#9825;</button>
 
 <div id="messages" style="display:none">
   <span>Uwielbiam Tw&oacute;j u&#347;miech&hellip; i te do&#322;eczki,</span>
@@ -90,7 +96,7 @@
 </div>
 
 <script>
-var STORAGE_KEY = 'daily_cards_v3';
+var STORAGE_KEY = 'daily_cards_v4';
 
 function getMessages() {
   var spans = document.getElementById('messages').getElementsByTagName('span');
@@ -115,20 +121,7 @@ function todayStr() {
   return d.getFullYear() + '-' + d.getMonth() + '-' + d.getDate();
 }
 
-function canRevealToday(state) { return state.lastDate !== todayStr(); }
-
-function getNextMidnight() {
-  var next = new Date();
-  next.setHours(24, 0, 0, 0);
-  return next;
-}
-
 function pad(n) { return n < 10 ? '0' + n : '' + n; }
-
-function formatCountdown(ms) {
-  var s = Math.floor(ms / 1000);
-  return pad(Math.floor(s / 3600)) + ':' + pad(Math.floor((s % 3600) / 60)) + ':' + pad(s % 60);
-}
 
 function showToast(msg) {
   var t = document.getElementById('toast');
@@ -140,22 +133,17 @@ function showToast(msg) {
 function buildGrid() {
   var MESSAGES = getMessages();
   var state = getState();
+  var canReveal = state.lastDate !== todayStr();
   var grid = document.getElementById('grid');
-  var canReveal = canRevealToday(state);
-  var nextUnrevealed = -1;
-  for (var i = 0; i < MESSAGES.length; i++) {
-    if (state.revealed.indexOf(i) === -1) { nextUnrevealed = i; break; }
-  }
-
   grid.innerHTML = '';
 
   for (var idx = 0; idx < MESSAGES.length; idx++) {
     (function(i) {
       var isRevealed = state.revealed.indexOf(i) !== -1;
-      var isNext = (i === nextUnrevealed && canReveal);
+      var cls = 'card-wrap ' + (isRevealed ? 'flipped revealed' : canReveal ? 'available' : 'locked');
 
       var wrap = document.createElement('div');
-      wrap.className = 'card-wrap' + (isRevealed ? ' flipped revealed' : !isNext ? ' locked' : '');
+      wrap.className = cls;
 
       var inner = document.createElement('div');
       inner.className = 'card-inner';
@@ -192,7 +180,7 @@ function buildGrid() {
       wrap.addEventListener('click', function() {
         if (isRevealed) return;
         var st = getState();
-        if (!canRevealToday(st)) {
+        if (st.lastDate === todayStr()) {
           showToast('wr\u00f3\u0107 jutro po kolejn\u0105 kart\u0119');
           return;
         }
@@ -212,15 +200,29 @@ function buildGrid() {
 function updateCountdown() {
   var state = getState();
   var el = document.getElementById('countdown');
-  if (canRevealToday(state)) { el.textContent = 'teraz'; el.style.color = '#c9a96e'; return; }
-  el.textContent = formatCountdown(getNextMidnight() - Date.now());
+  if (state.lastDate !== todayStr()) {
+    el.textContent = 'teraz';
+    el.style.color = '#c9a96e';
+    return;
+  }
+  var next = new Date(); next.setHours(24, 0, 0, 0);
+  var diff = next - Date.now();
+  var s = Math.floor(diff / 1000);
+  el.textContent = pad(Math.floor(s/3600)) + ':' + pad(Math.floor((s%3600)/60)) + ':' + pad(s%60);
+  el.style.color = '#c9a96e';
 }
+
+document.getElementById('reset-btn').addEventListener('click', function() {
+  localStorage.removeItem(STORAGE_KEY);
+  buildGrid();
+  updateCountdown();
+});
 
 buildGrid();
 updateCountdown();
 setInterval(function() {
   updateCountdown();
-  if (canRevealToday(getState())) buildGrid();
+  buildGrid();
 }, 1000);
 </script>
 </body>
